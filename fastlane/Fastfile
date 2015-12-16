@@ -10,10 +10,9 @@ match_git_url = "https://github.com/platanus/apple-certificates.git"
 cordova_app_name = cordova_get_app_name
 cordova_app_id = cordova_get_app_id
 project_path = "platforms/ios/#{cordova_app_name}.xcodeproj"
-require 'pry'
-binding.pry
-# config = YAML.load(open("config.yml"))
-# settings = OpenStruct.new(config)
+
+config = YAML.load(open("config.yml"))
+settings = OpenStruct.new(config)
 
 platform :ios do
   before_all do
@@ -23,6 +22,8 @@ platform :ios do
 
     # xctool # run the tests of your app
   end
+  require 'pry'
+  binding.pry
 
   config['stages'].keys.each do |stage|
     desc "Deploy a #{stage} version"
