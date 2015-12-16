@@ -5,12 +5,12 @@ fastlane_version "1.47.0"
 
 default_platform :ios
 
-# match_git_url = "https://github.com/platanus/apple-certificates.git"
-#
-# cordova_app_name = cordova_get_app_name
-# cordova_app_id = cordova_get_app_id
-# project_path = "platforms/ios/#{cordova_app_name}.xcodeproj"
-#
+match_git_url = "https://github.com/platanus/apple-certificates.git"
+
+cordova_app_name = cordova_get_app_name
+cordova_app_id = cordova_get_app_id
+project_path = "platforms/ios/#{cordova_app_name}.xcodeproj"
+
 # config = YAML.load(open("config.yml"))
 # settings = OpenStruct.new(config)
 
