@@ -29,12 +29,14 @@ platform :ios do
     desc "Deploy a #{stage} version"
     lane stage.to_sym do |options|
       puts stage
+      binding.pry
       stage_config = settings.stages[stage]
       build(options.merge(stage: stage, stage_config: stage_config))
     end
   end
 
   private_lane :build do |options|
+    binding.pry
     stage_config = options[:stage_config]
 
     sh "cordova prepare --env=#{options[:stage]}"
