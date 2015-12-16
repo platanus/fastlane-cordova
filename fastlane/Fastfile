@@ -1,76 +1,65 @@
-# Customise this file, documentation can be found here:
-# https://github.com/KrauseFx/fastlane/tree/master/docs
-# All available actions: https://github.com/KrauseFx/fastlane/blob/master/docs/Actions.md
-# can also be listed using the `fastlane actions` command
+require 'yaml'
+require 'ostruct'
 
-# Change the syntax highlighting to Ruby
-# All lines starting with a # are ignored when running `fastlane`
-
-# By default, fastlane will send which actions are used
-# No personal data is shared, more information on https://github.com/fastlane/enhancer
-# Uncomment the following line to opt out
-# opt_out_usage
-
-# If you want to automatically update fastlane if a new version is available:
-# update_fastlane
-
-# This is the minimum version number required.
-# Update this, if you use features of a newer version
-fastlane_version "1.36.2"
+fastlane_version "1.47.0"
 
 default_platform :ios
 
-app_name = File.open('../config.xml').read.match(/<name>(.*)<\/name>/)[1]
-project_path = "platforms/ios/#{app_name}.xcodeproj"
+match_git_url = "https://github.com/platanus/apple-certificates.git"
+
+cordova_app_name = cordova_get_app_name
+cordova_app_id = cordova_get_app_id
+project_path = "platforms/ios/#{cordova_app_name}.xcodeproj"
+
+config = YAML.load(open(File.join(File.dirname(__FILE__),"config.yml")))
+settings = OpenStruct.new(config)
 
 platform :ios do
   before_all do
     # ENV["SLACK_URL"] = "https://hooks.slack.com/services/..."
-
 
     # increment_build_number
 
     # xctool # run the tests of your app
   end
 
-  desc "Get certificates and profiles"
-  lane :match do
-    match_git_url = "git@github.com:platanus/apple-certificates.git"
-
-    match(git_url: match_git_url,
-          type: "adhoc")
-    match(git_url: match_git_url,
-          type: "development",
-          readonly: true)
-    match(git_url: match_git_url,
-          type: "appstore")
+  config['stages'].keys.each do |stage|
+    desc "Deploy a #{stage} version"
+    lane stage.to_sym do |options|
+      puts stage
+      stage_config = settings.stages[stage]
+      build(options.merge(stage: stage, stage_config: stage_config))
+    end
   end
 
-  desc "Build IPA file"
-  lane :build do
+  private_lane :build do |options|
+    stage_config = options[:stage_config]
+
+    sh "cordova prepare --env=#{options[:stage]}"
+
+    sign_type = options[:stage] == 'production' ? 'appstore' : 'development'
+    match(
+      git_url: match_git_url,
+      type: sign_type,
+      app_identifier: cordova_app_id,
+      username: stage_config['apple_id'],
+    )
+
     recreate_schemes(
       project: project_path
     )
 
-    sigh
-
-    sh "cordova prepare --env=production"
-
     gym(
+      verbose: true,
       project: project_path,
-      output_directory: "fastlane/build",
-      export_method: "ad-hoc",
-      xcconfig: "platforms/ios/cordova/build.xcconfig"
+      scheme: cordova_app_name,
+      xcconfig: "platforms/ios/cordova/build-#{stage_config['configuration']}.xcconfig"
     )
+
+    publish
   end
 
-  desc "Upload to testflight"
-  lane :testflight do
-    build
-    pilot(email: "amos@platan.us")
-  end
-
-  desc "Deploy a new version to the App Store"
+  desc "Upload the binary"
   lane :publish do
     deliver(
       force: true,
@@ -79,8 +68,6 @@ platform :ios do
       skip_screenshots: true
     )
   end
-
-  # You can define as many lanes as you want
 
   after_all do |lane|
     # This block is called, only if the executed lane was successful
