@@ -11,6 +11,7 @@ cordova_app_name = cordova_get_app_name
 cordova_app_id = cordova_get_app_id
 project_path = "platforms/ios/#{cordova_app_name}.xcodeproj"
 
+binding.pry
 # config = YAML.load(open("config.yml"))
 # settings = OpenStruct.new(config)
 
