@@ -64,6 +64,24 @@ platform :ios do
     end
   end
 
+  desc "Create necessary profiles and certificates"
+  lane :certs do
+    config.stages.each_key do |stage|
+      app_id = app_id_for(stage)
+      stage_config = config.stages[stage]
+
+      %w(appstore development).each do |sign_type|
+        match(
+          username: stage_config["apple_id"],
+          team_id: stage_config["team_id"],
+          app_identifier: app_id,
+          git_url: match_git_url,
+          type: sign_type
+        )
+      end
+    end
+  end
+
   private_lane :build do |options|
     stage_config = options[:stage_config]
 

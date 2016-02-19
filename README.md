@@ -58,6 +58,6 @@ of the stage
 ## Available lanes
 
 `fastlane ios create`: Create app ids for each of the stages
-
+`fastlane ios certs`: Create necessary profiles and certificates
 
 [fastlane-repo]: https://github.com/fastlane/fastlane
