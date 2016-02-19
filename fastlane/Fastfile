@@ -96,20 +96,10 @@ platform :ios do
   desc "stage: Application build environment"
   lane :deploy do |options|
     if options[:to] == 'testflight'
-      testing(options)
+      do_testflight(options)
     elsif options[:to] == 'appstore'
-      # TODO: appstore lane
+      do_appstore(options)
     end
-  end
-
-  desc "Upload the binary"
-  lane :publish do
-    deliver(
-      force: true,
-      submit_for_review: false,
-      skip_metadata: true,
-      skip_screenshots: true
-    )
   end
 
   private_lane :build do |options|
@@ -148,7 +138,7 @@ platform :ios do
   end
 
   desc "Upload to testflight"
-  private_lane :testing do |options|
+  private_lane :do_testflight do |options|
     stage = options[:stage]
     stage_config = config.stages[stage]
     app_id = app_id_for(stage)
@@ -160,6 +150,25 @@ platform :ios do
       team_id: stage_config["team_id"],
       app_identifier: app_id,
       skip_submission: true
+    )
+  end
+
+  desc "Upload the appstore"
+  private_lane :do_appstore do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    build(options)
+
+    deliver(
+      username: stage_config["apple_id"],
+      team_id: stage_config["team_id"],
+      app_identifier: app_id,
+      force: true,
+      submit_for_review: false,
+      skip_metadata: true,
+      skip_screenshots: true
     )
   end
 
