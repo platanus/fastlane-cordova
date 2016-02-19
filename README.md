@@ -44,10 +44,12 @@ stages:
   staging:
     apple_id: "ios-dev@platan.us"
     team_id: "35EKS95Z97"
+    configuration: Debug
 
   production:
     apple_id: "ios-dev@platan.us"
     team_id: "35EKS95Z97"
+    configuration: Release
 ```
 
 #### Configuration options:
@@ -59,5 +61,6 @@ of the stage
 
 `fastlane ios create`: Create app ids for each of the stages
 `fastlane ios certs`: Create necessary profiles and certificates
+`fastlane ios deploy`: Deploy app to testflight or appstore
 
 [fastlane-repo]: https://github.com/fastlane/fastlane

@@ -27,6 +27,14 @@ if config.stages.nil?
 end
 
 # Public methods
+def cordova_project_path
+  "platforms/ios/#{cordova_get_app_name}.xcodeproj"
+end
+
+def cordova_plist_path
+  "#{cordova_get_app_name}/#{cordova_get_app_name}-Info.plist"
+end
+
 def app_name_for(environment)
   if environment == "production"
     cordova_get_app_name
@@ -82,31 +90,16 @@ platform :ios do
     end
   end
 
-  private_lane :build do |options|
-    stage_config = options[:stage_config]
-
-    sh "cordova prepare --env=#{options[:stage]}"
-
-    sign_type = options[:stage] == 'production' ? 'appstore' : 'development'
-    match(
-      git_url: match_git_url,
-      type: sign_type,
-      app_identifier: cordova_app_id,
-      username: stage_config['apple_id'],
-    )
-
-    recreate_schemes(
-      project: project_path
-    )
-
-    gym(
-      verbose: true,
-      project: project_path,
-      scheme: cordova_app_name,
-      xcconfig: "platforms/ios/cordova/build-#{stage_config['configuration']}.xcconfig"
-    )
-
-    publish
+  desc "Deploy app to testflight or appstore"
+  desc "Params:"
+  desc "to: [apstore, testflight] Deployment destination"
+  desc "stage: Application build environment"
+  lane :deploy do |options|
+    if options[:to] == 'testflight'
+      testing(options)
+    elsif options[:to] == 'appstore'
+      # TODO: appstore lane
+    end
   end
 
   desc "Upload the binary"
@@ -116,6 +109,57 @@ platform :ios do
       submit_for_review: false,
       skip_metadata: true,
       skip_screenshots: true
+    )
+  end
+
+  private_lane :build do |options|
+
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    match(
+      username: stage_config["apple_id"],
+      team_id: stage_config["team_id"],
+      app_identifier: app_id,
+      git_url: match_git_url,
+      type: "appstore",
+      readonly: true
+    )
+
+    sh "cordova prepare --env=#{stage}"
+
+    update_app_identifier(
+      xcodeproj: cordova_project_path,
+      plist_path: cordova_plist_path,
+      app_identifier: app_id
+    )
+
+    recreate_schemes(
+      project: cordova_project_path
+    )
+
+    gym(
+      verbose: true,
+      project: cordova_project_path,
+      scheme: cordova_get_app_name,
+      xcconfig: "platforms/ios/cordova/build-#{stage_config['configuration']}.xcconfig"
+    )
+  end
+
+  desc "Upload to testflight"
+  private_lane :testing do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    build(options)
+
+    pilot(
+      username: stage_config["apple_id"],
+      team_id: stage_config["team_id"],
+      app_identifier: app_id,
+      skip_submission: true
     )
   end
 
