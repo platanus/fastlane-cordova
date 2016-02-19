@@ -7,12 +7,20 @@ default_platform :ios
 
 match_git_url = "https://github.com/platanus/apple-certificates.git"
 
-cordova_app_name = cordova_get_app_name
-cordova_app_id = cordova_get_app_id
-project_path = "platforms/ios/#{cordova_app_name}.xcodeproj"
-
-config = YAML.load(open(File.join(File.dirname(__FILE__),"config.yml")))
+config = YAML.load(open("config.yml"))
 settings = OpenStruct.new(config)
+
+def app_name_for(environment)
+  if environment == "production"
+    cordova_get_app_name
+  else
+    "#{cordova_get_app_name} - #{environment.capitalize}"
+  end
+end
+
+def app_id_for(environment)
+  "#{cordova_get_app_id}.#{environment}"
+end
 
 platform :ios do
   before_all do
@@ -23,12 +31,18 @@ platform :ios do
     # xctool # run the tests of your app
   end
 
-  config['stages'].keys.each do |stage|
-    desc "Deploy a #{stage} version"
-    lane stage.to_sym do |options|
-      puts stage
+  desc "Create app ids for each of the stages"
+  lane :create do |options|
+    settings.stages.each_key do |stage|
       stage_config = settings.stages[stage]
-      build(options.merge(stage: stage, stage_config: stage_config))
+      app_name = app_name_for(stage)
+      app_id = app_id_for(stage)
+      produce(
+        username: stage_config["apple_id"],
+        team_id: stage_config["team_id"],
+        app_identifier: app_id,
+        app_name: app_name
+      )
     end
   end
 

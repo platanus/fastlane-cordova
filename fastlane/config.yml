@@ -1,13 +1,13 @@
-default_stage: &default_stage
+---
+default: &default
   configuration: Debug
   apple_id: "ios-dev@platan.us"
-  team_id: "26677H6YZ3"
+  team_id: "35EKS95Z97"
 
 stages:
   staging:
-    <<: *default_stage
+    <<: *default
 
   production:
-    <<: *default_stage
+    <<: *default
     configuration: Release
-    team_id: 35EKS95Z97
