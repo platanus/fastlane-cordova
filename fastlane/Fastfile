@@ -44,7 +44,11 @@ def app_name_for(environment)
 end
 
 def app_id_for(environment)
-  "#{cordova_get_app_id}.#{environment}"
+  if environment == "production"
+    cordova_get_app_id
+  else
+    "#{cordova_get_app_id}.#{environment}"
+  end
 end
 
 # Lanes
