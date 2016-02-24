@@ -94,6 +94,22 @@ platform :ios do
     end
   end
 
+  desc "Enable app services services"
+  desc "Params:"
+  desc "[enable|disable]:[services,...] to enable or disable a service"
+  lane :service do |options|
+    config.stages.each_key do |stage|
+      options[:stage] = stage
+      update_services(options)
+
+      services_to_enable = options[:enable];
+
+      if services_to_enable
+        push_certs(options) if options[:enable].match /push/
+      end
+    end
+  end
+
   desc "Deploy app to testflight or appstore"
   desc "Params:"
   desc "to: [apstore, testflight] Deployment destination"
@@ -173,6 +189,80 @@ platform :ios do
       submit_for_review: false,
       skip_metadata: true,
       skip_screenshots: true
+    )
+  end
+
+  desc "Update services using produce"
+  private_lane :update_services do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    %w(enable disable).each do |state|
+      next unless services = options[state.to_sym]
+
+      produce_service(
+        action: state,
+        app_identifier: app_id,
+        username: stage_config['apple_id'],
+        team_id: stage_config['team_id'],
+        services: services.split(",")
+      )
+    end
+  end
+
+  desc "Runs produce cli services to enable and disable"
+  private_lane :produce_service do |options|
+    command = []
+    command << "produce #{options[:action]}_services"
+    command << "--app_identifier #{options[:app_identifier]}"
+    command << "--username #{options[:username]}"
+    command << "--team_id #{options[:team_id]}"
+    options[:services].each do |service|
+      command << "--#{service}"
+    end
+    sh command.join(' ')
+  end
+
+  desc "Create and upload the push certificates"
+  private_lane :push_certs do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+    sandbox = stage != 'production'
+
+    pem(
+      app_identifier: app_id,
+      username: stage_config['apple_id'],
+      team_id: stage_config['team_id'],
+      development: sandbox,
+      generate_p12: false,
+      save_private_key: false,
+      output_path: "./fastlane",
+      new_profile: proc do |profile_path|
+        require 'openssl'
+        require 'aws-sdk'
+
+        pem = File.read(profile_path)
+        pkey = OpenSSL::PKey::RSA.new(pem)
+        cert = OpenSSL::X509::Certificate.new(pem)
+
+        Aws.config[:region] = 'us-east-1'
+        sns = Aws::SNS::Client.new
+
+        resp = sns.create_platform_application({
+          name: app_id,
+          platform: sandbox ? 'APNS_SANDBOX' : 'APNS',
+          attributes: { # required
+            'PlatformCredential' => pkey.to_s,
+            'PlatformPrincipal' => cert.to_s
+          }
+        })
+
+        puts "------------------ A new Application was created in AWS SNS ------------------ ".yellow
+        puts "Application Name: #{app_id}".yellow
+        puts "Application ARN: #{resp.platform_application_arn}".yellow
+      end
     )
   end
 

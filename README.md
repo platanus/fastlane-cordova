@@ -100,6 +100,32 @@ fastlane ios deploy to:appstore stage:staging
 - **distribution types**: `testflight` or `appstore`
 - **stage**: the stages are defined in the `config.yml` file
 
+### `service`
+
+Enable or disable services in the application.
+
+```shell
+fastlane ios service enable:<service, ...> disable:<service, ...>
+
+# To deploy enable push notifications
+fastlane ios service enable:push-notification
+```
+
+- **supported service types**:
+  - `healthkit` HealthKit
+  - `homekit` HomeKit
+  - `wireless-conf` Wireless Accessory Configuration
+  - `inter-app-audio` Inter-App-Audio
+  - `passbook` Passbook
+  - `push-notification` Push notification
+  - `vpn-conf` VPN Configuration
+
+When enabling `push-notification` the lane also creates a new certificate for
+each stage and upload them to the SNS platform creating a new application.
+**Important** You need to have a valid AWS credentials in your environment. `ENV['AWS_ACCESS_KEY_ID'] and ENV['AWS_SECRET_ACCESS_KEY']`
+
+
+
 [fastlane-repo]: https://github.com/fastlane/fastlane
 [fastlane-match]: https://github.com/fastlane/match
 [codesigning-guide]: https://codesigning.guide
