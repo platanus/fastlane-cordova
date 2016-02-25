@@ -1,78 +1,190 @@
-# Customise this file, documentation can be found here:
-# https://github.com/KrauseFx/fastlane/tree/master/docs
-# All available actions: https://github.com/KrauseFx/fastlane/blob/master/docs/Actions.md
-# can also be listed using the `fastlane actions` command
+require 'yaml'
+require 'ostruct'
 
-# Change the syntax highlighting to Ruby
-# All lines starting with a # are ignored when running `fastlane`
-
-# By default, fastlane will send which actions are used
-# No personal data is shared, more information on https://github.com/fastlane/enhancer
-# Uncomment the following line to opt out
-# opt_out_usage
-
-# If you want to automatically update fastlane if a new version is available:
-# update_fastlane
-
-# This is the minimum version number required.
-# Update this, if you use features of a newer version
-fastlane_version "1.36.2"
+fastlane_version "1.47.0"
 
 default_platform :ios
 
-app_name = File.open('../config.xml').read.match(/<name>(.*)<\/name>/)[1]
-project_path = "platforms/ios/#{app_name}.xcodeproj"
+match_git_url = "https://github.com/platanus/apple-certificates.git"
 
+# Load configuration
+config_file = File.expand_path("config.yml")
+begin
+  config = YAML.load(open(config_file))
+rescue
+  Helper.log.error "Config file not found"
+  Helper.log.error "Please add a config.yml file in your fastlane directory"
+  Helper.log.error "Check http://github.com/platanus/fastlane-base for information"
+  Helper.log.error "about the structure of the config file"
+  exit 1
+end
+
+config = OpenStruct.new(config)
+if config.stages.nil?
+  Helper.log.error "Required key missing (stages)"
+  Helper.log.error "Please add a stages key with the stages you want to define"
+  exit 1
+end
+
+# Public methods
+def cordova_project_path
+  "platforms/ios/#{cordova_get_app_name}.xcodeproj"
+end
+
+def cordova_plist_path
+  "#{cordova_get_app_name}/#{cordova_get_app_name}-Info.plist"
+end
+
+def app_name_for(environment)
+  if environment == "production"
+    cordova_get_app_name
+  else
+    "#{cordova_get_app_name} - #{environment.capitalize}"
+  end
+end
+
+def app_id_for(environment)
+  if environment == "production"
+    cordova_get_app_id
+  else
+    "#{cordova_get_app_id}.#{environment}"
+  end
+end
+
+# Lanes
 platform :ios do
   before_all do
     # ENV["SLACK_URL"] = "https://hooks.slack.com/services/..."
-
 
     # increment_build_number
 
     # xctool # run the tests of your app
   end
 
-  desc "Get certificates and profiles"
-  lane :match do
-    match_git_url = "git@github.com:platanus/apple-certificates.git"
-
-    match(git_url: match_git_url,
-          type: "adhoc")
-    match(git_url: match_git_url,
-          type: "development",
-          readonly: true)
-    match(git_url: match_git_url,
-          type: "appstore")
+  desc "Create app ids for each of the stages"
+  lane :create do |options|
+    config.stages.each_key do |stage|
+      stage_config = config.stages[stage]
+      app_name = app_name_for(stage)
+      app_id = app_id_for(stage)
+      produce(
+        username: stage_config["apple_id"],
+        team_id: stage_config["team_id"],
+        app_identifier: app_id,
+        app_name: app_name
+      )
+    end
   end
 
-  desc "Build IPA file"
-  lane :build do
-    recreate_schemes(
-      project: project_path
+  desc "Create necessary profiles and certificates"
+  lane :certs do
+    config.stages.each_key do |stage|
+      app_id = app_id_for(stage)
+      stage_config = config.stages[stage]
+
+      %w(appstore development).each do |sign_type|
+        match(
+          username: stage_config["apple_id"],
+          team_id: stage_config["team_id"],
+          app_identifier: app_id,
+          git_url: match_git_url,
+          type: sign_type
+        )
+      end
+    end
+  end
+
+  desc "Enable app services services"
+  desc "Params:"
+  desc "[enable|disable]:[services,...] to enable or disable a service"
+  lane :service do |options|
+    config.stages.each_key do |stage|
+      options[:stage] = stage
+      update_services(options)
+
+      services_to_enable = options[:enable];
+
+      if services_to_enable
+        push_certs(options) if options[:enable].match /push/
+      end
+    end
+  end
+
+  desc "Deploy app to testflight or appstore"
+  desc "Params:"
+  desc "to: [apstore, testflight] Deployment destination"
+  desc "stage: Application build environment"
+  lane :deploy do |options|
+    if options[:to] == 'testflight'
+      do_testflight(options)
+    elsif options[:to] == 'appstore'
+      do_appstore(options)
+    end
+  end
+
+  private_lane :build do |options|
+
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    match(
+      username: stage_config["apple_id"],
+      team_id: stage_config["team_id"],
+      app_identifier: app_id,
+      git_url: match_git_url,
+      type: "appstore",
+      readonly: true
     )
 
-    sigh
+    sh "cordova prepare --env=#{stage}"
 
-    sh "cordova prepare --env=production"
+    update_app_identifier(
+      xcodeproj: cordova_project_path,
+      plist_path: cordova_plist_path,
+      app_identifier: app_id
+    )
+
+    recreate_schemes(
+      project: cordova_project_path
+    )
 
     gym(
-      project: project_path,
-      output_directory: "fastlane/build",
-      export_method: "ad-hoc",
-      xcconfig: "platforms/ios/cordova/build.xcconfig"
+      verbose: true,
+      project: cordova_project_path,
+      scheme: cordova_get_app_name,
+      xcconfig: "platforms/ios/cordova/build-#{stage_config['configuration']}.xcconfig"
     )
   end
 
   desc "Upload to testflight"
-  lane :testflight do
-    build
-    pilot(email: "amos@platan.us")
+  private_lane :do_testflight do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    build(options)
+
+    pilot(
+      username: stage_config["apple_id"],
+      team_id: stage_config["team_id"],
+      app_identifier: app_id,
+      skip_submission: true
+    )
   end
 
-  desc "Deploy a new version to the App Store"
-  lane :publish do
+  desc "Upload the appstore"
+  private_lane :do_appstore do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    build(options)
+
     deliver(
+      username: stage_config["apple_id"],
+      team_id: stage_config["team_id"],
+      app_identifier: app_id,
       force: true,
       submit_for_review: false,
       skip_metadata: true,
@@ -80,7 +192,79 @@ platform :ios do
     )
   end
 
-  # You can define as many lanes as you want
+  desc "Update services using produce"
+  private_lane :update_services do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+
+    %w(enable disable).each do |state|
+      next unless services = options[state.to_sym]
+
+      produce_service(
+        action: state,
+        app_identifier: app_id,
+        username: stage_config['apple_id'],
+        team_id: stage_config['team_id'],
+        services: services.split(",")
+      )
+    end
+  end
+
+  desc "Runs produce cli services to enable and disable"
+  private_lane :produce_service do |options|
+    command = []
+    command << "produce #{options[:action]}_services"
+    command << "--app_identifier #{options[:app_identifier]}"
+    command << "--username #{options[:username]}"
+    command << "--team_id #{options[:team_id]}"
+    options[:services].each do |service|
+      command << "--#{service}"
+    end
+    sh command.join(' ')
+  end
+
+  desc "Create and upload the push certificates"
+  private_lane :push_certs do |options|
+    stage = options[:stage]
+    stage_config = config.stages[stage]
+    app_id = app_id_for(stage)
+    sandbox = stage != 'production'
+
+    pem(
+      app_identifier: app_id,
+      username: stage_config['apple_id'],
+      team_id: stage_config['team_id'],
+      development: sandbox,
+      generate_p12: false,
+      save_private_key: false,
+      output_path: "./fastlane",
+      new_profile: proc do |profile_path|
+        require 'openssl'
+        require 'aws-sdk'
+
+        pem = File.read(profile_path)
+        pkey = OpenSSL::PKey::RSA.new(pem)
+        cert = OpenSSL::X509::Certificate.new(pem)
+
+        Aws.config[:region] = 'us-east-1'
+        sns = Aws::SNS::Client.new
+
+        resp = sns.create_platform_application({
+          name: app_id,
+          platform: sandbox ? 'APNS_SANDBOX' : 'APNS',
+          attributes: { # required
+            'PlatformCredential' => pkey.to_s,
+            'PlatformPrincipal' => cert.to_s
+          }
+        })
+
+        puts "------------------ A new Application was created in AWS SNS ------------------ ".yellow
+        puts "Application Name: #{app_id}".yellow
+        puts "Application ARN: #{resp.platform_application_arn}".yellow
+      end
+    )
+  end
 
   after_all do |lane|
     # This block is called, only if the executed lane was successful
