@@ -6,6 +6,7 @@ platanus workflow for app developemnt and deployment.
 ## What is fastlane
 
 From the fastlane [repository][fastlane-repo]
+
 > fastlane lets you define and run your deployment pipelines for different
 > environments. It helps you unify your apps release process and automate the
 > whole process.
@@ -19,10 +20,8 @@ fastlane-cordova collections into your project
 
 In you app repository, add the fastlane configuration file
 
-```
-mkdir fastlane
-touch fastlane/Fastfile
-```
+    mkdir fastlane
+    touch fastlane/Fastfile
 
 In the `Fastfile` you need to import the `Fastfile` located in this repository
 
@@ -30,7 +29,7 @@ In the `Fastfile` you need to import the `Fastfile` located in this repository
 # <app_repo>/fastlane/Fastfile
 
 # import from an online repository
-import_from_git "https://github.com/platanus/fastlane-cordova"
+import_from_git(url:"https://github.com/platanus/fastlane-cordova")
 
 # or
 # import from a local checkout
@@ -40,7 +39,7 @@ import "~/fastlane-cordova/fastlane/Fastfile"
 
 You'll need to add a `config.yml` with the base configuration.
 
-```yml
+```yaml
 ---
 stages:
   staging:
@@ -54,10 +53,11 @@ stages:
     configuration: Release
 ```
 
-#### Configuration options:
+**Configuration options:**
 
-- `stages` (required): is a map of stage specific configuration where the *key* is
-the name of the stage
+- `stages` (required): is a map of stage specific configuration where the *key*
+is the name of the stage
+
 - `configuration` (optional): `[Debug, Release]` is the configuration that xcode
 will use to compile your project
 
@@ -72,18 +72,23 @@ Just run fastlane with the lane and options you want to use
 ### `create`
 
 Creates app ids for each of the stages. The apps are created using the
-information in the cordova `config.xml` file. It use the following values:
+information in the cordova `config.xml` file with a `stage` suffix.
+It use the following values:
 
-| value | template | example |
-| ----- | -------- | ------- |
-| **App Id** | `<cordova_app_id>.<stage>` | us.platan.madbill.staging |
-| **App Name** | `<cordova_app_name> - <stage>` | Madbill - Staging |
+| value        | template                       | example                   |
+| ------------ | ------------------------------ | ------------------------- |
+| **App Id**   | `<cordova_app_id>.<stage>`     | us.platan.madbill.staging |
+| **App Name** | `<cordova_app_name> - <stage>` | Madbill - Staging         |
+
+> **Note**: If a stage is named **production**, the `app_id` and `app_name` are
+> used as are defined in the `config.xml` without the `stage` suffix
 
 ### `certs`
 
 Create necessary profiles and certificates
 
-It use [match][fastlane-match] and follows the [code signing guide][codesigning-guide]
+It use [match][fastlane-match] and follows the
+[code signing guide][codesigning-guide]
 
 ### `deploy`
 
@@ -112,6 +117,7 @@ fastlane ios service enable:push-notification
 ```
 
 - **supported service types**:
+
   - `healthkit` HealthKit
   - `homekit` HomeKit
   - `wireless-conf` Wireless Accessory Configuration
@@ -122,13 +128,9 @@ fastlane ios service enable:push-notification
 
 When enabling `push-notification` the lane also creates a new certificate for
 each stage and upload them to the SNS platform creating a new application.
-**Important** You need to have a valid AWS credentials in your environment. `ENV['AWS_ACCESS_KEY_ID'] and ENV['AWS_SECRET_ACCESS_KEY']`
 
-
-
-[fastlane-repo]: https://github.com/fastlane/fastlane
-[fastlane-match]: https://github.com/fastlane/match
-[codesigning-guide]: https://codesigning.guide
+> **Important** You need to have a valid AWS credentials in your
+> environment. `ENV['AWS_ACCESS_KEY_ID'] and ENV['AWS_SECRET_ACCESS_KEY']`
 
 ## Credits
 
@@ -140,4 +142,9 @@ fastlane-cordova is maintained by [platanus](http://platan.us).
 
 ## License
 
-Potassium is © 2016 platanus, spa. It is free software and may be redistributed under the terms specified in the LICENSE file.
+Potassium is © 2016 platanus, spa. It is free software and may be redistributed
+under the terms specified in the LICENSE file.
+
+[fastlane-repo]: https://github.com/fastlane/fastlane
+[fastlane-match]: https://github.com/fastlane/match
+[codesigning-guide]: https://codesigning.guide
