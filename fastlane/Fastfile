@@ -122,7 +122,9 @@ platform :ios do
     end
   end
 
-  private_lane :build do |options|
+  desc "Build and sing the app"
+  desc "Usuarlly used in CI/CD"
+  lane :build do |options|
 
     stage = options[:stage]
     stage_config = config.stages[stage]

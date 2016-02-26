@@ -95,6 +95,8 @@ It use [match][fastlane-match] and follows the
 Deploy app to testflight or appstore. To deploy you need to specify
 distribution type and the stage.
 
+> This lane use the `build` lane to build and sign the app
+
 ```shell
 fastlane ios deploy to:<distribution> stage:<stage>
 
@@ -131,6 +133,23 @@ each stage and upload them to the SNS platform creating a new application.
 
 > **Important** You need to have a valid AWS credentials in your
 > environment. `ENV['AWS_ACCESS_KEY_ID'] and ENV['AWS_SECRET_ACCESS_KEY']`
+
+### `build`
+
+Build and sign the app for testflight or appstore. To build the app you
+need to specify distribution type and the stage.
+
+The `build` lane is especially useful in our CI/CD infrastructure
+
+> This lane is used by the `deploy` lane to build and sign the app and the
+> deploy it.
+
+```shell
+fastlane ios build to:<distribution> stage:<stage>
+
+# To build the staging app for the appstore
+fastlane ios build to:appstore stage:staging
+```
 
 ## Credits
 
