@@ -1,11 +1,14 @@
 require 'yaml'
 require 'ostruct'
+require 'match'
+require 'match/git_helper'
 
 fastlane_version "1.47.0"
 
 default_platform :ios
 
 match_git_url = "https://github.com/platanus/apple-certificates.git"
+google_git_url = "https://github.com/platanus/google-keystores.git"
 
 # Load configuration
 config_file = File.expand_path("config.yml")
@@ -282,7 +285,56 @@ platform :ios do
   end
 end
 
+platform :android do
 
+  desc "Deploy app to playstore"
+  desc "Params:"
+  desc "stage: Application build environment"
+  lane :deploy do |options|
+    do_playstore(options)
+  end
+
+  desc "Generate or download key"
+  desc "Params:"
+  desc "force_download: true|false"
+  lane :keystore do |options|
+    app_id = app_id_for('production')
+    workspace = Match::GitHelper.clone(google_git_url, true)
+    keystore = File.join(workspace, "#{app_id}.keystore")
+    unless File.exist?(keystore)
+      # TODO: Get storepass and keypass from somewhere
+      sh "cd #{workspace}; keytool -genkey -v -keystore #{app_id}.keystore -dname \"CN=us.platan, OU=Platanus, O=Platanus, L=Santiago, S=, C=CL\" -alias alias_name -keyalg RSA -keysize 2048 -validity 10000 -storepass holahola -keypass holahola"
+      message = Match::GitHelper.generate_commit_message({app_identifier: app_id, type: 'keystore'})
+      Match::GitHelper.commit_changes(workspace, message, google_git_url)
+    end
+    keystore
+  end
+
+  private_lane :do_playstore do |options|
+    build(options)
+    sign(options)
+    zipalign(options)
+  end
+
+  private_lane :build do |options|
+    stage = options[:stage]
+    sh "cordova prepare --env=#{stage}"
+    sh "cd ..; ionic build android --env=#{stage} --release"
+  end
+
+  private_lane :sign do |options|
+    keystore_path = keystore()
+    # TODO: Get storepass and keypass from somewhere
+    sh "cd ..; jarsigner -verbose -sigalg SHA1withRSA -digestalg SHA1 -keystore #{keystore_path} platforms/android/build/outputs/apk/android-release-unsigned.apk alias_name -storepass holahola -keypass holahola"
+  end
+
+  private_lane :zipalign do |options|
+    stage = options[:stage]
+    app_id = app_id_for(stage)
+    sh "cd ..; zipalign -v 4 platforms/android/build/outputs/apk/android-release-unsigned.apk ./platforms/android/build/outputs/apk/#{app_id}.apk"
+  end
+
+end
 
 # More information about multiple platforms in fastlane: https://github.com/KrauseFx/fastlane/blob/master/docs/Platforms.md
 # All available actions: https://github.com/KrauseFx/fastlane/blob/master/docs/Actions.md
