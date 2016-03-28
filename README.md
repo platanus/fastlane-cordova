@@ -41,31 +41,46 @@ You'll need to add a `config.yml` with the base configuration.
 
 ```yaml
 ---
+default: &default
+  apple_id: "ios-dev@platan.us"
+  team_id: "35EKS95Z97"
+  configuration: Debug
+
 stages:
   staging:
-    apple_id: "ios-dev@platan.us"
-    team_id: "35EKS95Z97"
-    configuration: Debug
+    <<: *default
 
   production:
-    apple_id: "ios-dev@platan.us"
-    team_id: "35EKS95Z97"
+    <<: *default
     configuration: Release
 ```
 
-**Configuration options:**
+** Configuration options:**
 
-- `stages` (required): is a map of stage specific configuration where the *key*
+- **stages** (required):
+Is a map of stage specific configuration where the *key*
 is the name of the stage
 
-- `configuration` (optional): `[Debug, Release]` is the configuration that xcode
-will use to compile your project
+  - `apple_id` (required): The Apple ID account to use
+
+  - `team_id` (required): The apple developer team ID
+
+  - `configuration` (optional): `[Debug, Release]` is the configuration
+    that xcode will use to compile your project
 
 ## How to use it
 
 Just run fastlane with the lane and options you want to use
 
     fastlane ios <lane> [option_key:option_value,...]
+
+1. Create the application and app ids in iTunes Connect and the developer
+center with the `create` lane
+
+1. Then you should create the certificates and provisioning profiles running
+the `certs` lane
+
+1. Then you should be able to deploy with the `deploy` lane
 
 ## Available lanes
 
