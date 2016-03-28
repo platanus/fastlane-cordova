@@ -1,7 +1,7 @@
 require 'yaml'
 require 'ostruct'
 
-fastlane_version "1.47.0"
+fastlane_version "1.68.0"
 
 default_platform :ios
 
