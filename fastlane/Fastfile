@@ -5,8 +5,6 @@ fastlane_version "1.47.0"
 
 default_platform :ios
 
-match_git_url = "https://github.com/platanus/apple-certificates.git"
-
 # Load configuration
 config_file = File.expand_path("config.yml")
 begin
@@ -87,7 +85,7 @@ platform :ios do
           username: stage_config["apple_id"],
           team_id: stage_config["team_id"],
           app_identifier: app_id,
-          git_url: match_git_url,
+          git_url: stage_config["certificates_url"],
           type: sign_type
         )
       end
@@ -132,7 +130,7 @@ platform :ios do
       username: stage_config["apple_id"],
       team_id: stage_config["team_id"],
       app_identifier: app_id,
-      git_url: match_git_url,
+      git_url: stage_config["certificates_url"],
       type: "appstore",
       readonly: true
     )
