@@ -56,7 +56,7 @@ stages:
     configuration: Release
 ```
 
-** Configuration options:**
+**Configuration options:**
 
 - **stages** (required):
 Is a map of stage specific configuration where the *key*
