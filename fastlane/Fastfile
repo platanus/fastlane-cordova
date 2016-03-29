@@ -25,12 +25,18 @@ if config.stages.nil?
 end
 
 # Public methods
+
 def cordova_project_path
-  "platforms/ios/#{cordova_get_app_name}.xcodeproj"
+  "platforms/ios/#{app_name_sanitized}.xcodeproj"
+end
+
+# http://stackoverflow.com/questions/1939333/how-to-make-a-ruby-string-safe-for-a-filesystem
+def app_name_sanitized
+  cordova_get_app_name.gsub(/[^0-9A-Za-z.\-]/, '_')
 end
 
 def cordova_plist_path
-  "#{cordova_get_app_name}/#{cordova_get_app_name}-Info.plist"
+  "#{app_name_sanitized}/#{app_name_sanitized}-Info.plist"
 end
 
 def app_name_for(environment)
@@ -150,7 +156,7 @@ platform :ios do
     gym(
       verbose: true,
       project: cordova_project_path,
-      scheme: cordova_get_app_name,
+      scheme: app_name_sanitized,
       xcconfig: "platforms/ios/cordova/build-#{stage_config['configuration']}.xcconfig"
     )
   end
