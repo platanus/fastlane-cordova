@@ -44,7 +44,7 @@ You'll need to add a `config.yml` with the base configuration.
 default: &default
   apple_id: "ios-dev@platan.us"
   team_id: "35EKS95Z97"
-  match_url: "https://github.com/org/repo"
+  certificates_url: "https://github.com/org/repo"
   configuration: Debug
 
 stages:
@@ -66,7 +66,7 @@ is the name of the stage
 
   - `team_id` (required): The apple developer team ID
 
-  - `match_url` (required):
+  - `certificates_url` (required):
       The url where match will store and sync the certificates and
       provitioning profiles.
       > **NOTE:** You should use a different repository per account and team.
