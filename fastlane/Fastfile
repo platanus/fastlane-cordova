@@ -234,12 +234,13 @@ platform :ios do
     stage_config = config.stages[stage]
     app_id = app_id_for(stage)
     sandbox = stage != 'production'
+    development = (stage =~ /staging|production/).nil?
 
     pem(
       app_identifier: app_id,
       username: stage_config['apple_id'],
       team_id: stage_config['team_id'],
-      development: sandbox,
+      development: development,
       generate_p12: false,
       save_private_key: false,
       output_path: "./fastlane",
