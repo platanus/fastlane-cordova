@@ -6,12 +6,14 @@ module Fastlane
 
     class CordovaGetAppNameAction < Action
       def self.run(params)
-        Actions.verify_gem!('nokogiri')
-        require 'nokogiri'
+        require 'rexml/document'
 
         config_file = File.open(File.expand_path(params[:path]))
-        config = Nokogiri::XML(config_file)
-        config.at('widget name').text
+        config = REXML::Document.new(config_file)
+
+        value = config.elements['widget'].elements['name'].first.value
+
+        Actions.lane_context[SharedValues::CORDOVA_APP_NAME] = value
       end
 
       #####################################################
@@ -19,18 +21,18 @@ module Fastlane
       #####################################################
 
       def self.description
-        "Returns value from config.xml of your cordova project"
+        "Returns the app name defined in the cordova configuration file"
       end
 
       def self.details
-        "This action let to get any value from the config.xml file. " \
-        "It will return a ruby object you can use."
+        "This action let to get from the cordova config.xml the value of" \
+        "the name tag"
       end
 
       def self.available_options
         [
           FastlaneCore::ConfigItem.new(key: :path,
-                                       env_name: "CORDOVA_GET_APP_NAME_CONFIG_PATH",
+                                       env_name: "CORDOVA_CONFIG_PATH",
                                        description: "Path to config file you want to read",
                                        optional: true,
                                        default_value: './config.xml',
@@ -44,7 +46,7 @@ module Fastlane
 
       def self.output
         [
-          ['CORDOVA_APP_NAME', 'Value for the key required from the config.xml file']
+          ['CORDOVA_APP_NAME', 'Cordova App Name']
         ]
       end
 

@@ -6,12 +6,24 @@ module Fastlane
 
     class CordovaGetAppIdAction < Action
       def self.run(params)
-        Actions.verify_gem!('nokogiri')
-        require 'nokogiri'
+        require 'rexml/document'
 
         config_file = File.open(File.expand_path(params[:path]))
-        config = Nokogiri::XML(config_file)
-        config.at('widget').attribute('id').value
+        config = REXML::Document.new(config_file)
+
+        id_key = case params[:platform]
+                 when :ios
+                   'ios-CFBundleIdentifier'
+                 when :android
+                   'android-packageName'
+                 else
+                   'id'
+                 end
+
+        value = config.elements['widget'].attributes[id_key]
+        value = config.elements['widget'].attributes['id'] if value.nil?
+
+        Actions.lane_context[SharedValues::CORDOVA_APP_ID] = value
       end
 
       #####################################################
@@ -19,18 +31,18 @@ module Fastlane
       #####################################################
 
       def self.description
-        "Returns value from config.xml of your cordova project"
+        "Returns the app id defined in the cordova configuration file"
       end
 
       def self.details
-        "This action let to get any value from the config.xml file." \
-        "It will return a ruby object you can use."
+        "This action let to get from the cordova config.xml the value of" \
+        "the id attribute from the widget tag"
       end
 
       def self.available_options
         [
           FastlaneCore::ConfigItem.new(key: :path,
-                                       env_name: "CORDOVA_GET_APP_ID_CONFIG_PATH",
+                                       env_name: "CORDOVA_CONFIG_PATH",
                                        description: "Path to config file you want to read",
                                        optional: true,
                                        default_value: './config.xml',
@@ -38,13 +50,18 @@ module Fastlane
                                          unless File.exist?(File.expand_path(value))
                                            raise "Couldn't find config file at path '#{value}'".red
                                          end
-                                       end)
+                                       end),
+          FastlaneCore::ConfigItem.new(key: :platform,
+                                      description: "Look for the specific plarform id",
+                                      is_string: false,
+                                      optional: true,
+                                      default_value: nil)
         ]
       end
 
       def self.output
         [
-          ['CORDOVA_APP_ID', 'Value for the key required from the config.xml file']
+          ['CORDOVA_APP_ID', 'Cordova App ID']
         ]
       end
 
