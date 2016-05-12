@@ -1,4 +1,4 @@
-# Platanus fastlane base
+# Fastlane for Cordova
 
 This is a collection of *lanes* and *actions* ment to streamline the
 platanus workflow for app developemnt and deployment.
