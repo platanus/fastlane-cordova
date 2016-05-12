@@ -45,7 +45,6 @@ default: &default
   apple_id: "ios-dev@platan.us"
   team_id: "35EKS95Z97"
   certificates_url: "https://github.com/org/repo"
-  configuration: Debug
 
 stages:
   staging:
@@ -53,7 +52,6 @@ stages:
 
   production:
     <<: *default
-    configuration: Release
 ```
 
 **Configuration options:**
@@ -70,9 +68,6 @@ is the name of the stage
       The url where match will store and sync the certificates and
       provitioning profiles.
       > **NOTE:** You should use a different repository per account and team.
-
-  - `configuration` (optional): `[Debug, Release]` is the configuration
-    that xcode will use to compile your project
 
 ## How to use it
 

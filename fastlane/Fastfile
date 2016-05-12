@@ -157,7 +157,7 @@ platform :ios do
       verbose: true,
       project: cordova_project_path,
       scheme: app_name_sanitized,
-      xcconfig: "platforms/ios/cordova/build-#{stage_config['configuration']}.xcconfig"
+      xcconfig: "platforms/ios/cordova/build-release.xcconfig"
     )
   end
 
