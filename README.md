@@ -29,7 +29,7 @@ In the `Fastfile` you need to import the `Fastfile` located in this repository
 # <app_repo>/fastlane/Fastfile
 
 # import from an online repository
-import_from_git(url:"https://github.com/platanus/fastlane-cordova")
+import_from_git(url:"https://github.com/F5-Works/fastlane-cordova")
 
 # or
 # import from a local checkout

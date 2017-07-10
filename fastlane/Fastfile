@@ -32,7 +32,9 @@ end
 
 # http://stackoverflow.com/questions/1939333/how-to-make-a-ruby-string-safe-for-a-filesystem
 def app_name_sanitized
-  cordova_get_app_name.gsub(/[^0-9A-Za-z.\-]/, '_')
+  # cordova_get_app_name.gsub(/[^0-9A-Za-z.\-]/, '_')
+  # https://bibwild.wordpress.com/2015/02/04/be-careful-of-regexes-in-a-unicode-world/
+  cordova_get_app_name.gsub(/[^[[:alnum:]][[:space:]]\']/, '_')
 end
 
 def cordova_plist_path
@@ -171,7 +173,7 @@ platform :ios do
 
     pilot(
       username: stage_config["apple_id"],
-      team_id: stage_config["team_id"],
+      team_id: stage_config["itc_team_id"],
       app_identifier: app_id,
       skip_submission: true
     )
@@ -187,7 +189,7 @@ platform :ios do
 
     deliver(
       username: stage_config["apple_id"],
-      team_id: stage_config["team_id"],
+      team_id: stage_config["itc_team_id"],
       app_identifier: app_id,
       force: true,
       submit_for_review: false,
